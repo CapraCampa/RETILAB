@@ -1,0 +1,68 @@
+VLAN su Router:
+    inter fast 0/0 "numero-vlan"
+    encapsulation dot1Q "numero-vlan"
+    ip address "ip" "netmask"
+    no shutdown
+    exit
+
+
+Server DHCP:
+    ip helper-address "indirizzo ip del dhcp server"
+(lo scrivo su interfaccia/sottinterfaccia dove c'è gateway della rete a cui devo dare indirizzi)
+
+
+RIPv1 e RIPv2:
+    router rip
+    //Se si vuole utilizzare la versione 2 di rip digitare ora 'version 2'
+    passive-interface fast 0/0
+    network "indirizzo base"
+
+OSPF:
+    router ospf 1
+    area 1 stub
+    passive-interface fast 0/0
+    network "indirizzo base" "wildcard" area 1
+
+
+NAT
+Si seleziona prima l'interfaccia, e si dice quell'interfaccia se è interna o esterna. In base alla configurazione, è necessario dover configurare le sub-interfaces, se si parla di VLAN
+    interface FastEthernet x.y
+    ip nat inside
+    exit
+    interface FastEthernet w.z
+    ip nat outside
+    exit
+Poi nuova access list:
+    access-list "nuovo-numero" permit ip any any
+Bisogna dire come mappare gli indirizzi. Nella modalità configurazione del router:
+    ip nat inside source list "numero-acl-creata-in-precedenza" interface FastEthernet "interfaccia-outside"
+-Se ora noi volessimo accedere a dei servizi offerti da un server coperto da nat, non dobbiamo più rivolgerci all'ip privato del server, ma a quello pubblico del router. Dobbiamo quindi abilitare il port forwarding (in modalità config):
+    ip nat inside source static tcp "indirizzo-privato-server" "porta-servizio" "indirizzo-pubblico-router" "porta-router"
+
+Creare un'ACL e assegnarla ad un'interfaccia:
+access-list "numero-acl" "permit/deny" "protocol" "source/wildcard" "destination/wildcard" [port] [established].
+
+Per applicare un'ACL:
+entrare nella configurazione della specifica interfaccia
+ip access-group "numero-acl" "out/in"
+
+Lista di acl
+(#)show ip access-list
+Eliminare una access list
+(config)# no access-list "numero-access-list"
+Esempio 1:
+La ACL 110 permette il passaggio di traffico TCP che arrivano da qualunque sorgente e che hanno per destinazione l'indirizzo 192.168.0.1 e la porta 80
+ access-list 110 permit TCP any host 192.168.0.1 eq 80
+Esempio 2:
+(La ACL 110 nega il passaggio di pacchetti ICMP da qualunque host a qualunque altro host)
+ access-list 110 deny ICMP any any
+Esempio 3:
+(Tutto il traffico TCP in entrata/uscita già inizializzato viene accettato)
+ access-list 110 permit tcp any any established
+
+Rotte statiche:
+- Per ogni coppia di router bisogna avere una sottorete. Ogni interfaccia di ogni router deve essere in una sottorete diversa. Ogni sottorete deve avere 2 host + base + broad. Deve quindi essere /30.
+- Si assegna ad ogni coppia un indirizzo ip apartenente alla stessa sottorete.
+- Si creano le rotte statiche nei router: nella configurazione digitare il comando: 
+    ip route "base address destination" "netmask" "next router ip"
+- Oppure è possibile farlo graficamente.
